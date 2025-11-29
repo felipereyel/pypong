@@ -21,30 +21,18 @@ BLACK = (0, 0, 0)
 
 # Paddle class
 class Paddle:
-    def __init__(self, x, y, width, height, speed):
+    def __init__(self, x, y, width, height, speed, joystick, axis_index=0):
         self.rect = pygame.Rect(x, y, width, height)
         self.speed = speed
+        self.joystick = joystick
+        self.axis_index = axis_index
 
     def draw(self, screen):
         pygame.draw.rect(screen, WHITE, self.rect)
 
     def move(self):
-        mouse_y = pygame.mouse.get_pos()[1]
-        self.rect.y = mouse_y - self.rect.height / 2
-
-        # Boundary checking
-        if self.rect.top < 0:
-            self.rect.top = 0
-        if self.rect.bottom > SCREEN_HEIGHT:
-            self.rect.bottom = SCREEN_HEIGHT
-
-
-class OpponentPaddle(Paddle):
-    def move(self, ball):
-        if self.rect.centery < ball.rect.centery:
-            self.rect.y += self.speed
-        if self.rect.centery > ball.rect.centery:
-            self.rect.y -= self.speed
+        axis_value = self.joystick.get_axis(self.axis_index)
+        self.rect.y += self.speed * axis_value
 
         # Boundary checking
         if self.rect.top < 0:
@@ -86,6 +74,16 @@ class Ball:
 class Game:
     def __init__(self):
         pygame.init()
+        pygame.joystick.init()
+        self.joysticks = [
+            pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())
+        ]
+        if not self.joysticks:
+            raise RuntimeError("No joysticks found.")
+
+        for joystick in self.joysticks:
+            joystick.init()
+
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Pong")
         self.clock = pygame.time.Clock()
@@ -93,19 +91,27 @@ class Game:
         self.player_score = 0
         self.opponent_score = 0
 
+        joystick1 = self.joysticks[0]
+
+        right_axis = 3 if joystick1.get_numaxes() >= 4 else 1
+
         self.player_paddle = Paddle(
             SCREEN_WIDTH - PADDLE_WIDTH * 2,
             SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2,
             PADDLE_WIDTH,
             PADDLE_HEIGHT,
             PADDLE_SPEED,
+            joystick=joystick1,
+            axis_index=right_axis,
         )
-        self.opponent_paddle = OpponentPaddle(
+        self.opponent_paddle = Paddle(
             PADDLE_WIDTH,
             SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2,
             PADDLE_WIDTH,
             PADDLE_HEIGHT,
-            OPPONENT_SPEED,
+            PADDLE_SPEED,
+            joystick=joystick1,
+            axis_index=1,
         )
         self.ball = Ball(
             SCREEN_WIDTH / 2 - BALL_SIZE / 2,
@@ -124,7 +130,7 @@ class Game:
 
             self.ball.move(self.player_paddle, self.opponent_paddle)
             self.player_paddle.move()
-            self.opponent_paddle.move(self.ball)
+            self.opponent_paddle.move()
 
             if self.ball.rect.left <= 0:
                 self.player_score += 1
