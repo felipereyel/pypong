@@ -1,8 +1,9 @@
 import pygame
+import logging
 
 # Constants
-SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 960
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
 
 PADDLE_WIDTH = 20
 PADDLE_HEIGHT = 140
@@ -156,5 +157,12 @@ class Game:
 
 
 if __name__ == "__main__":
-    game = Game()
-    game.run()
+    logging.basicConfig(
+        filename="pypong.log",
+        level=logging.DEBUG,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+    try:
+        Game().run()
+    except RuntimeError as e:
+        logging.error(e)
